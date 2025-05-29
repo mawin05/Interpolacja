@@ -31,23 +31,32 @@ def lagrange(dist, height, n):
         y.append(result)
     return np.array(y), nodes
 
+def interpolate(data, name):
+    distance = np.array(data.iloc[:,0].tolist())
+    height = np.array(data.iloc[:,1].tolist())
+
+    number_of_nodes = [10, 20, 40, 80]
+
+    for num in number_of_nodes:
+        interpolated_heights, nodes = lagrange(distance, height, num)
+        x_nodes = distance[nodes]
+        y_nodes = height[nodes]
+        plt.plot(distance, height, color='blue', label='Dane oryginalne-'+name)
+        plt.plot(distance, interpolated_heights, color="red", label="Interpolacja metodą Lagrange'a")
+        plt.plot(x_nodes, y_nodes, marker='o', linestyle='none', color="green", label="Węzły interpolacji")
+        if name == 'MountEverest':
+            plt.ylim(6000, 9000)
+        else:
+            plt.ylim(0, 3000)
+        plt.xlabel('Dystans (m)')
+        plt.ylabel('Wysokość (m)')
+        plt.title("Metoda Lagrange'a - " + str(num) + " węzłów")
+        plt.grid(True)
+        plt.legend()
+        plt.savefig('wykresy/' + name + '/lagrange' + str(num) +'.png')
+        plt.close()
 
 everest_data = pd.read_csv('2018_paths/MountEverest.csv', sep=',', skiprows=1, header=None)
-everest_dist = np.array(everest_data.iloc[:,0].tolist())
-everest_height = np.array(everest_data.iloc[:,1].tolist())
-
-y_interpolated, nodes = lagrange(everest_dist, everest_height, 80)
-x_nodes = everest_dist[nodes]
-y_nodes = y_interpolated[nodes]
-
-plt.plot(everest_dist, everest_height, color='blue', label='Dane oryginalne')
-plt.plot(everest_dist, y_interpolated, color="red", label="Interpolacja metodą Lagrange'a")
-plt.plot(x_nodes, y_nodes, marker='o', linestyle='none', color="green", label="Węzły interpolacji")
-plt.ylim(6000, 9000)
-plt.xlabel('Dystans (m)')
-plt.ylabel('Wysokość (m)')
-plt.title("Metoda Lagrange'a - 80 węzłów")
-plt.grid(True)
-plt.legend()
-plt.savefig('wykresy/MountEverest/lagrange80.png')
-plt.show()
+colorado_data = pd.read_csv('2018_paths/WielkiKanionKolorado.csv', sep=',', skiprows=1, header=None)
+interpolate(everest_data, 'MountEverest')
+interpolate(colorado_data, 'WielkiKanion')
