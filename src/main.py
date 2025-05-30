@@ -11,10 +11,24 @@ def get_nodes(dist, n):
     indices = np.linspace(0, len(dist) - 1, n, dtype=int)
     return indices
 
+def get_chebyshev_nodes(dist, n):
+    k = np.arange(1, n + 1)
+    x_cheb = np.cos((2 * k - 1) * np.pi / (2 * n))
 
-def lagrange(dist, height, n):
+    indices = []
+    for val in x_cheb:
+        idx = int((np.abs(dist - val)).argmin())
+        indices.append(idx)
+    return indices
+
+
+def lagrange(dist, height, n, chebyshev):
     dist = scale_distance(dist)
-    nodes = get_nodes(dist, n)
+    nodes = []
+    if chebyshev:
+        nodes = get_chebyshev_nodes(dist, n)
+    else:
+        nodes = get_nodes(dist, n)
     y = []
     for point in range(0,len(dist)):
         x = dist[point]
@@ -31,14 +45,14 @@ def lagrange(dist, height, n):
         y.append(result)
     return np.array(y), nodes
 
-def interpolate(data, name):
+def interpolate(data, name, chebyshev):
     distance = np.array(data.iloc[:,0].tolist())
     height = np.array(data.iloc[:,1].tolist())
 
-    number_of_nodes = [10, 20, 40, 80]
+    number_of_nodes = [10, 20, 40, 60]
 
     for num in number_of_nodes:
-        interpolated_heights, nodes = lagrange(distance, height, num)
+        interpolated_heights, nodes = lagrange(distance, height, num, chebyshev)
         x_nodes = distance[nodes]
         y_nodes = height[nodes]
         plt.plot(distance, height, color='blue', label='Dane oryginalne-'+name)
@@ -53,10 +67,15 @@ def interpolate(data, name):
         plt.title("Metoda Lagrange'a - " + str(num) + " węzłów")
         plt.grid(True)
         plt.legend()
-        plt.savefig('wykresy/' + name + '/lagrange' + str(num) +'.png')
+        path = 'wykresy/' + name
+        if chebyshev:
+            path += '/chebyshev'
+        path += '/lagrange' + str(num) +'.png'
+        plt.savefig(path)
         plt.close()
 
 everest_data = pd.read_csv('2018_paths/MountEverest.csv', sep=',', skiprows=1, header=None)
 colorado_data = pd.read_csv('2018_paths/WielkiKanionKolorado.csv', sep=',', skiprows=1, header=None)
-interpolate(everest_data, 'MountEverest')
-interpolate(colorado_data, 'WielkiKanion')
+interpolate(everest_data, 'MountEverest', False)
+interpolate(colorado_data, 'WielkiKanion', False)
+interpolate(everest_data, "MountEverest", True)
