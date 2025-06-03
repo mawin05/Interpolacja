@@ -45,49 +45,66 @@ def lagrange(dist, height, n, chebyshev):
         y.append(result)
     return np.array(y), nodes
 
-def get_splines(dist, height, n, resolution_per_interval=10):
+def spline(dist, height, n):
     dist = scale_distance(dist)
     nodes = get_nodes(dist, n)
     x = dist[nodes]
     y = height[nodes]
+    h = x[1] - x[0]
+    A = np.zeros((4*(n-1), 4*(n-1)))
+    ans_vector = np.zeros(4*(n-1))
+    counter = 0
 
-    h = x[1:] - x[:-1]
+    for i in range(0,n-1): # po każdym splajnie
+        A[counter, i*4] = 1
+        ans_vector[counter] = y[i]
+        counter += 1
+        for j in range(0,4):
+            A[counter, (i*4)+j] = h**j
+        ans_vector[counter] = y[i+1]
+        counter += 1
 
-    alpha = np.zeros(n)
-    for i in range(1, n - 1):
-        alpha[i] = (3 / h[i]) * (y[i + 1] - y[i]) - (3 / h[i - 1]) * (y[i] - y[i - 1])
+    for i in range(1, n-1):
+        first = 4*(i-1)
+        second = 4*i
+        for j in range(1,4):
+            A[counter, first+j] = j * h**(j-1)
+        A[counter, second+1] = -1
+        ans_vector[counter] = 0
+        counter += 1
 
-    l = np.ones(n)
-    mu = np.zeros(n)
-    z = np.zeros(n)
+    for i in range(1, n-1):
+        first = 4 * (i-1)
+        second = 4 * i
+        A[counter, first+2] = 2
+        A[counter, first+3] = 6*h
+        A[counter, second+2] = -2
+        ans_vector[counter] = 0
+        counter += 1
 
-    for i in range(1, n - 1):
-        l[i] = 2 * (x[i + 1] - x[i - 1]) - h[i - 1] * mu[i - 1]
-        mu[i] = h[i] / l[i]
-        z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i]
+    A[counter, 2] = 2
+    ans_vector[counter] = 0
+    counter += 1
 
-    c = np.zeros(n)
-    b = np.zeros(n - 1)
-    d = np.zeros(n - 1)
-    a = y[:-1].copy()
+    last = 4*(n-2)
+    A[counter, last + 2] = 2
+    A[counter, last + 3] = 6 * h
+    ans_vector[counter] = 0
+    counter += 1
 
-    for j in range(n - 2, -1, -1):
-        c[j] = z[j] - mu[j] * c[j + 1]
-        b[j] = (y[j + 1] - y[j]) / h[j] - h[j] * (c[j + 1] + 2 * c[j]) / 3
-        d[j] = (c[j + 1] - c[j]) / (3 * h[j])
-
+    solved = np.linalg.solve(A, ans_vector)
     interpolated_y = []
 
     for xi in dist:
-        i = np.searchsorted(x, xi)-1
-        i = max(0, min(i, n-2))
-        dx = xi - x[i]
-        sx = a[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3
+        j = np.searchsorted(x, xi) - 1 # znalezienie odpowiedniego przedziału
+        j = max(0, min(j, n - 2))
+        dx = xi - x[j]
+        i = j*4
+        a, b, c, d = solved[i:i + 4]
+        sx = a + b * dx + c * dx ** 2 + d * dx ** 3
         interpolated_y.append(sx)
 
-
     return interpolated_y, nodes
-
 
 def interpolate(data, name, chebyshev, method):
     distance = np.array(data.iloc[:,0].tolist())
@@ -101,7 +118,7 @@ def interpolate(data, name, chebyshev, method):
             method_name = "Lagrange'a"
             method_path = '/lagrange'
         else:
-            interpolated_heights, nodes = get_splines(distance, height, num)
+            interpolated_heights, nodes = spline(distance, height, num)
             method_name = "splajnów"
             method_path = "/spline"
 
@@ -132,4 +149,4 @@ colorado_data = pd.read_csv('2018_paths/WielkiKanionKolorado.csv', sep=',', skip
 # interpolate(colorado_data, 'WielkiKanion', False)
 # interpolate(everest_data, "MountEverest", True)
 interpolate(colorado_data, 'WielkiKanion', False, 'spline')
-
+interpolate(everest_data, 'MountEverest', False, 'spline')
